@@ -813,6 +813,8 @@ const styles = StyleSheet.create({
     },
     activeToggle: { // Style for the active toggle button (used in both places)
         backgroundColor: '#c8facc', // Light green active background
+        borderWidth: 1,
+        borderColor: 'black'
     },
     modalToggleText: {
         fontSize: moderateScale(14),

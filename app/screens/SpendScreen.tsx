@@ -828,6 +828,8 @@ const styles = StyleSheet.create({
     },
     activeToggle: { // Active Spend Toggle
         backgroundColor: '#fceded', // Very Light Pink/Red
+        borderWidth: 1,
+        borderColor: 'black'
     },
     modalToggleText: {
         fontSize: moderateScale(14),
