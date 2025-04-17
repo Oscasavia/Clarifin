@@ -420,7 +420,8 @@ const FinanceTracker = () => {
              while (occurrenceDate <= rangeEndDateUTC) {
                  // Check if occurrence is also within the allowed marking start date (trackingStartDate)
                  if (occurrenceDate >= rangeStartDate) {
-                     const dateKey = occurrenceDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+                    //  const dateKey = occurrenceDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+                    const dateKey = occurrenceDate.toISOString().split('T')[0];
                      addOrUpdateDot(dateKey, item.type === 'income' ? incomeDot : billDot);
                  }
 
