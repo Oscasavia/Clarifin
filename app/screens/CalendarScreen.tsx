@@ -793,6 +793,7 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: moderateScale(20),
         borderTopRightRadius: moderateScale(20),
         width: '100%',
+        height: '60%',
         maxHeight: '70%', // Limit height
         elevation: 10,
     },
@@ -836,7 +837,7 @@ const styles = StyleSheet.create({
          marginTop: verticalScale(15),
          backgroundColor: '#a9a9a9', // Grey button
          paddingVertical: verticalScale(10),
-         paddingHorizontal: moderateScale(20),
+         paddingHorizontal: moderateScale(40),
          borderRadius: moderateScale(10),
          alignItems: 'center',
          alignSelf: 'center', // Center the button

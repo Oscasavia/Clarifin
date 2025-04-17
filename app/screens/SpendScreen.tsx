@@ -703,8 +703,8 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: moderateScale(20),
         borderTopRightRadius: moderateScale(20),
         width: '100%',
-        height: '30%',
-        maxHeight: '60%',
+        height: '55%',
+        maxHeight: '70%',
         paddingBottom: verticalScale(30),
     },
      modalTitle: { // Shared modal title

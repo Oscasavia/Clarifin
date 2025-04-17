@@ -687,8 +687,8 @@ const styles = StyleSheet.create({
         borderTopLeftRadius: moderateScale(20),
         borderTopRightRadius: moderateScale(20),
         width: '100%',
-        height: '30%',
-        maxHeight: '60%', // Limit height
+        height: '55%',
+        maxHeight: '70%', // Limit height
         paddingBottom: verticalScale(30), // Extra padding at bottom for safe area / home indicator
     },
     modalContent: { // For Add/Edit modal (centered)
