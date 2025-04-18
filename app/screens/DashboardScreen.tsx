@@ -9,7 +9,7 @@ import { formatCurrency } from '../utils/formatting'; // Adjust path
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
 // --- Import Interfaces & Keys (Assume these are defined centrally or copy definitions) ---
-type TransactionInterval = 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly';
+type TransactionInterval = 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly';
 
 interface TransactionItem {
     id: string;
@@ -53,6 +53,7 @@ const getNextOccurrence = (currentUTC: Date, interval: TransactionInterval): Dat
     const next = new Date(currentUTC);
     switch (interval) {
         case 'weekly': next.setUTCDate(next.getUTCDate() + 7); break;
+        case 'biweekly': next.setUTCDate(next.getUTCDate() + 14); break;
         case 'monthly': next.setUTCMonth(next.getUTCMonth() + 1); break;
         case 'quarterly': next.setUTCMonth(next.getUTCMonth() + 3); break;
         case 'biannually': next.setUTCMonth(next.getUTCMonth() + 6); break;

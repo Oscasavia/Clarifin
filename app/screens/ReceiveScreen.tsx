@@ -14,8 +14,8 @@ import { useCurrency } from '../context/CurrencyContext';
 import { formatCurrency } from '../utils/formatting';
 
 // --- Type Definition for Intervals ---
-type IncomeInterval = 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly';
-const INTERVAL_OPTIONS: IncomeInterval[] = ['weekly', 'monthly', 'quarterly', 'biannually', 'yearly'];
+type IncomeInterval = 'weekly' | 'biweekly' |'monthly' | 'quarterly' | 'biannually' | 'yearly';
+const INTERVAL_OPTIONS: IncomeInterval[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'biannually', 'yearly'];
 
 
 // --- Interfaces ---
@@ -62,6 +62,9 @@ const getNextOccurrence = (current: Date, interval: IncomeInterval): Date => {
     switch (interval) {
         case 'weekly':
             next.setDate(next.getDate() + 7);
+            break;
+        case 'biweekly':
+            next.setDate(next.getDate() + 14);
             break;
         case 'monthly':
             next.setMonth(next.getMonth() + 1);
@@ -148,7 +151,8 @@ const ReceiveTracker = () => {
 
         const amount = parseFloat(incomeAmount);
         const id = editItemId || `${incomeType}-${Date.now()}-${Math.random()}`;
-        const isoDateString = selectedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        // const isoDateString = selectedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        const isoDateString = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
         try {
             if (incomeType === 'recurring') {

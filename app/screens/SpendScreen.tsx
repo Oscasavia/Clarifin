@@ -8,12 +8,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker'; // Added DateTimePickerEvent
 import { scale, verticalScale, moderateScale } from 'react-native-size-matters';
 
-import { useCurrency } from '../context/CurrencyContext';
+import * as Notifications from 'expo-notifications';
+import { CurrencyCode, useCurrency } from '../context/CurrencyContext';
 import { formatCurrency } from '../utils/formatting';
 
 // --- Type Definition for Intervals ---
-type SpendInterval = 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly';
-const SPEND_INTERVAL_OPTIONS: SpendInterval[] = ['weekly', 'monthly', 'quarterly', 'biannually', 'yearly'];
+type SpendInterval = 'weekly' | 'biweekly' |'monthly' | 'quarterly' | 'biannually' | 'yearly';
+const SPEND_INTERVAL_OPTIONS: SpendInterval[] = ['weekly', 'biweekly', 'monthly', 'quarterly', 'biannually', 'yearly'];
 
 // --- Interfaces ---
 interface RecurringBillItem {
@@ -34,12 +35,27 @@ interface OneTimeSpendItem {
 // --- AsyncStorage Keys ---
 const ASYNC_KEY_RECURRING_BILLS = 'recurringBills';
 const ASYNC_KEY_ONE_TIME_SPENDS = 'oneTimeSpends';
+// --- Key for notification mappings ---
+const ASYNC_KEY_NOTIFICATION_MAPPINGS = '@notification_mappings_v1';
+// --- Keys for Reading Settings ---
+const ASYNC_KEY_REMINDERS_ENABLED = '@settings_reminders_enabled_v1';
+const ASYNC_KEY_REMINDER_DAYS_BEFORE = '@settings_reminders_days_before_v1';
+// --- End Keys ---
 
 // --- Helper Functions (Duplicate from ReceiveTracker or move to utils) ---
+// (parseISODate and getNextOccurrence assumed to be defined correctly as before)
 const parseISODate = (dateString: string): Date | null => {
     try {
-        const datePart = dateString.split('T')[0];
-        const date = new Date(datePart + 'T00:00:00');
+        const datePart = dateString?.split('T')[0];
+         if (!datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            console.warn("Invalid date format for parsing:", dateString);
+            return null;
+        }
+        const date = new Date(Date.UTC(
+            parseInt(datePart.substring(0, 4)),
+            parseInt(datePart.substring(5, 7)) - 1,
+            parseInt(datePart.substring(8, 10))
+        ));
         if (isNaN(date.getTime())) {
             console.warn("Invalid date parsed:", dateString);
             return null;
@@ -51,27 +67,184 @@ const parseISODate = (dateString: string): Date | null => {
     }
 };
 
-const getNextOccurrence = (current: Date, interval: SpendInterval): Date => {
-    const next = new Date(current);
+const getNextOccurrence = (currentUTC: Date, interval: SpendInterval): Date => {
+    const next = new Date(currentUTC.getTime());
     switch (interval) {
-        case 'weekly':
-            next.setDate(next.getDate() + 7);
-            break;
-        case 'monthly':
-            next.setMonth(next.getMonth() + 1);
-            break;
-        case 'quarterly':
-            next.setMonth(next.getMonth() + 3);
-            break;
-        case 'biannually':
-            next.setMonth(next.getMonth() + 6);
-            break;
-        case 'yearly':
-            next.setFullYear(next.getFullYear() + 1);
-            break;
+        case 'weekly': next.setUTCDate(next.getUTCDate() + 7); break;
+        case 'biweekly': next.setUTCDate(next.getUTCDate() + 14); break;
+        case 'monthly': next.setUTCMonth(next.getUTCMonth() + 1); break;
+        case 'quarterly': next.setUTCMonth(next.getUTCMonth() + 3); break;
+        case 'biannually': next.setUTCMonth(next.getUTCMonth() + 6); break;
+        case 'yearly': next.setUTCFullYear(next.getUTCFullYear() + 1); break;
     }
     return next;
 };
+// --- End Date Helper Functions ---
+
+// --- Notification ID Management Helpers (Implemented) ---
+// Stores mapping like: { "billId1": "notificationId1", "billId2": "notificationId2" }
+type NotificationMapping = Record<string, string>;
+
+const getStoredNotificationId = async (billId: string): Promise<string | null> => {
+    try {
+        const mappingsJson = await AsyncStorage.getItem(ASYNC_KEY_NOTIFICATION_MAPPINGS);
+        const mappings: NotificationMapping = mappingsJson ? JSON.parse(mappingsJson) : {};
+        return mappings[billId] || null;
+    } catch (e) {
+        console.error("Error getting stored notification ID:", e);
+        return null;
+    }
+};
+
+const storeNotificationId = async (billId: string, notificationId: string): Promise<void> => {
+     try {
+        const mappingsJson = await AsyncStorage.getItem(ASYNC_KEY_NOTIFICATION_MAPPINGS);
+        const mappings: NotificationMapping = mappingsJson ? JSON.parse(mappingsJson) : {};
+        mappings[billId] = notificationId;
+        await AsyncStorage.setItem(ASYNC_KEY_NOTIFICATION_MAPPINGS, JSON.stringify(mappings));
+        console.log(`Stored notification mapping: ${billId} -> ${notificationId}`);
+     } catch (e) {
+         console.error("Error storing notification ID:", e);
+         // Maybe alert the user or log to a service?
+     }
+};
+
+const removeStoredNotificationId = async (billId: string): Promise<void> => {
+     try {
+        const mappingsJson = await AsyncStorage.getItem(ASYNC_KEY_NOTIFICATION_MAPPINGS);
+        const mappings: NotificationMapping = mappingsJson ? JSON.parse(mappingsJson) : {};
+        if (mappings[billId]) {
+             delete mappings[billId];
+             await AsyncStorage.setItem(ASYNC_KEY_NOTIFICATION_MAPPINGS, JSON.stringify(mappings));
+             console.log(`Removed notification mapping for bill: ${billId}`);
+        }
+     } catch (e) {
+         console.error("Error removing stored notification ID:", e);
+     }
+};
+// --- End Notification ID Helpers ---
+
+
+// --- Notification Scheduling Helper (Updated with Cancellation) ---
+const scheduleBillReminder = async (bill: RecurringBillItem, currencyCode: string) => {
+    // --- User Preference Placeholders ---
+    // TODO: Read these values from AsyncStorage based on user settings
+    let remindersEnabled = false; // Assume enabled for now
+    let daysBefore = 1;
+    try {
+        const enabledStr = await AsyncStorage.getItem(ASYNC_KEY_REMINDERS_ENABLED);
+        remindersEnabled = enabledStr === 'true';
+
+        const daysStr = await AsyncStorage.getItem(ASYNC_KEY_REMINDER_DAYS_BEFORE);
+        if (daysStr !== null) {
+            const parsedDays = parseInt(daysStr, 10);
+            if (!isNaN(parsedDays) && parsedDays >= 0) { // Allow 0 days (same day reminder)
+                 daysBefore = parsedDays;
+            }
+        }
+        // TODO: Read reminder time preference if implemented
+    } catch (e) {
+        console.error("Failed to read reminder settings, using defaults.", e);
+    }
+    const REMINDER_HOUR = 9; // TODO: Replace with stored preference
+    const REMINDER_MINUTE = 0; // TODO: Replace with stored preference
+    // --- End Placeholders ---
+
+    if (!remindersEnabled) {
+        console.log(`Reminders are disabled, skipping schedule for ${bill.name}.`);
+        // Ensure any *existing* reminder is cancelled if user disables the feature
+        const existingNotificationId = await getStoredNotificationId(bill.id);
+        if (existingNotificationId) {
+             try {
+                await Notifications.cancelScheduledNotificationAsync(existingNotificationId);
+                console.log(`Cancelled existing reminder for ${bill.name} because reminders are disabled.`);
+                await removeStoredNotificationId(bill.id);
+             } catch (cancelError) {
+                 console.error(`Error cancelling notification ${existingNotificationId} for disabled reminder:`, cancelError)
+             }
+        }
+        return;
+    }
+
+    const startDate = parseISODate(bill.startDate);
+    if (!startDate) {
+        console.error(`Cannot schedule reminder for ${bill.name}, invalid start date.`);
+        return;
+    }
+
+    // --- Calculate next occurrence and trigger date (using 'daysBefore') ---
+    let nextOccurrenceUTC = new Date(startDate.getTime());
+    const todayUTC = new Date();
+    todayUTC.setUTCHours(0, 0, 0, 0);
+
+    while (nextOccurrenceUTC < todayUTC) {
+        const nextTry = getNextOccurrence(nextOccurrenceUTC, bill.interval);
+        if (nextTry <= nextOccurrenceUTC) {
+            console.warn("Stuck calculating next occurrence for notification scheduling:", bill.id);
+            return;
+        }
+        nextOccurrenceUTC = nextTry;
+    }
+
+    const reminderTriggerUTC = new Date(nextOccurrenceUTC.getTime());
+    reminderTriggerUTC.setUTCDate(reminderTriggerUTC.getUTCDate() - daysBefore);
+    reminderTriggerUTC.setUTCHours(REMINDER_HOUR, REMINDER_MINUTE, 0, 0);
+    const triggerDate = new Date(reminderTriggerUTC.getTime());
+
+    if (triggerDate <= new Date()) {
+        console.log(`Reminder date for ${bill.name} (${triggerDate.toISOString()}) is in the past or too soon. Skipping scheduling.`);
+        // Also cancel existing notification if the next valid reminder is in the past
+        const existingNotificationId = await getStoredNotificationId(bill.id);
+         if (existingNotificationId) {
+              try {
+                 await Notifications.cancelScheduledNotificationAsync(existingNotificationId);
+                 console.log(`Cancelled existing reminder for ${bill.name} as next reminder date is in the past.`);
+                 await removeStoredNotificationId(bill.id);
+              } catch (cancelError) {
+                  console.error(`Error cancelling notification ${existingNotificationId} for past reminder date:`, cancelError)
+              }
+         }
+        return;
+    }
+
+    const notificationContent = {
+        title: 'Upcoming Bill Reminder (Bills Tracker)',
+        body: `Reminder: "${bill.name}" for ${formatCurrency(bill.amount, currencyCode as CurrencyCode)} is due around ${nextOccurrenceUTC.toLocaleDateString()}.`,
+        data: { billId: bill.id, screen: 'SpendTracker' },
+        sound: 'default',
+    };
+
+    try {
+        // --- Implemented: Cancel existing notification before scheduling new ---
+        const existingNotificationId = await getStoredNotificationId(bill.id);
+        if (existingNotificationId) {
+            try {
+                await Notifications.cancelScheduledNotificationAsync(existingNotificationId);
+                console.log(`Cancelled existing reminder for ${bill.name} (ID: ${existingNotificationId}) before rescheduling.`);
+                // No need to call removeStoredNotificationId here, as storeNotificationId below will overwrite it
+            } catch(e) {
+                // Log error but proceed, maybe the notification was already triggered/deleted
+                console.warn(`Could not cancel previous notification ${existingNotificationId}:`, e)
+            }
+        }
+        // -----------------------------------------------------------------
+
+        const notificationId = await Notifications.scheduleNotificationAsync({
+            content: notificationContent,
+            trigger: triggerDate,
+        });
+        console.log(`Scheduled reminder for ${bill.name} (ID: ${notificationId}) to trigger at ${triggerDate.toString()} (local time)`);
+
+        // --- Implemented: Store the new notificationId ---
+        await storeNotificationId(bill.id, notificationId);
+        // -------------------------------------------------
+
+    } catch (error) {
+        console.error(`Failed to schedule notification for ${bill.name}:`, error);
+    }
+};
+// --- End Notification Scheduling Helper ---
+
 // --- Component ---
 const SpendTracker = () => {
     const { selectedCurrency } = useCurrency();
@@ -153,7 +326,8 @@ const SpendTracker = () => {
 
         const amt = parseFloat(amount);
         const id = editItemId || `${spendType}-${Date.now()}-${Math.random()}`;
-        const isoDateString = selectedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        // const isoDateString = selectedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+        const isoDateString = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`;
 
         try {
             if (spendType === 'recurring') {
@@ -170,6 +344,15 @@ const SpendTracker = () => {
                     : [...recurringBills, newItem];
                 await AsyncStorage.setItem(ASYNC_KEY_RECURRING_BILLS, JSON.stringify(updated));
                 setRecurringBills(updated);
+                // --- Schedule/Reschedule reminder (uses updated helper) ---
+                const { status } = await Notifications.getPermissionsAsync();
+                if (status === 'granted') {
+                     // scheduleBillReminder now reads settings internally
+                    await scheduleBillReminder(newItem, selectedCurrency);
+                } else {
+                    console.log("Notification permission not granted, skipping reminder schedule.");
+                    // Note: We don't prompt for permission *here*. Settings screen should handle that.
+                }
             } else { // 'one-time'
                 const newItem: OneTimeSpendItem = {
                     id,
@@ -233,6 +416,22 @@ const SpendTracker = () => {
                     onPress: async () => {
                         try {
                             if (type === 'recurring') {
+                                // --- Implemented: Cancel Notification FIRST ---
+                                const notificationId = await getStoredNotificationId(id);
+                                if (notificationId) {
+                                    try {
+                                        await Notifications.cancelScheduledNotificationAsync(notificationId);
+                                        console.log(`Cancelled reminder for deleted bill ${id} (Notification ID: ${notificationId})`);
+                                        await removeStoredNotificationId(id);
+                                    } catch (e) {
+                                        console.warn(`Could not cancel notification ${notificationId} on delete:`, e)
+                                        // Still attempt to remove mapping even if cancel fails
+                                        await removeStoredNotificationId(id);
+                                    }
+                                } else {
+                                     console.log(`No stored notification ID found for bill ${id} to cancel.`);
+                                }
+                                // ------------------------------------------
                                 const updated = recurringBills.filter(i => i.id !== id);
                                 await AsyncStorage.setItem(ASYNC_KEY_RECURRING_BILLS, JSON.stringify(updated));
                                 setRecurringBills(updated);

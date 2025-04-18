@@ -15,7 +15,7 @@ import { useCurrency } from '../context/CurrencyContext'; // Adjust path
 import { formatCurrency } from '../utils/formatting'; // Adjust path
 
 // --- Type Definition for Intervals (Consistent with Spend/Receive) ---
-type TransactionInterval = 'weekly' | 'monthly' | 'quarterly' | 'biannually' | 'yearly';
+type TransactionInterval = 'weekly' | 'biweekly' |'monthly' | 'quarterly' | 'biannually' | 'yearly';
 
 // --- Define Interfaces for Data Structures (Aligned with Spend/Receive) ---
 interface TransactionItem {
@@ -75,6 +75,9 @@ const getNextOccurrence = (currentUTC: Date, interval: TransactionInterval): Dat
     switch (interval) {
         case 'weekly':
             next.setUTCDate(next.getUTCDate() + 7);
+            break;
+        case 'biweekly':
+            next.setUTCDate(next.getUTCDate() + 14);
             break;
         case 'monthly':
             next.setUTCMonth(next.getUTCMonth() + 1);
@@ -835,12 +838,14 @@ const styles = StyleSheet.create({
     },
     closeButtonAlt: { // Alternative close button style
          marginTop: verticalScale(15),
-         backgroundColor: '#a9a9a9', // Grey button
+        //  backgroundColor: '#a9a9a9', // Grey button
+        backgroundColor: '#FF6347',
          paddingVertical: verticalScale(10),
-         paddingHorizontal: moderateScale(40),
+         paddingHorizontal: moderateScale(90),
          borderRadius: moderateScale(10),
          alignItems: 'center',
          alignSelf: 'center', // Center the button
+         elevation: 3
      },
      closeButtonTextAlt: {
          color: 'white',
