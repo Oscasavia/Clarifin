@@ -301,7 +301,7 @@ const SettingsScreen = () => {
             }
         } else {
             // Handle cases where mailto links aren't supported (rare on mobile)
-            Alert.alert('Error', `Could not find an email app to open this link.`);
+            Alert.alert('Error', `It looks like your device doesn't have an email app configured.\n\nPlease send your feedback to: ${contactEmail}`);
             // Alternative: Show the email address for manual copying
             // Alert.alert('Contact Us', `Please send your feedback to: ${contactEmail}`);
         }

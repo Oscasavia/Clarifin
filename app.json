@@ -3,9 +3,9 @@
     "name": "Clarifin",
     "slug": "clarifin",
     "owner": "oscasavia",
-    "version": "1.7.0",
+    "version": "1.9.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/Clarifin_icon.png",
     "scheme": "clarifin",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,7 +17,7 @@
       "package": "com.oscasavia.clarifin",
       "versionCode": 3,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/Clarifin_icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [],
@@ -26,7 +26,7 @@
     "web": {
       "bundler": "metro",
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/Clarifin_icon.png"
     },
     "updates": {
       "fallbackToCacheTimeout": 0
@@ -39,7 +39,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/Clarifin_icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
