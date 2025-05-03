@@ -78,7 +78,7 @@ const clearStoredNotificationMappings = async (): Promise<void> => {
 // --- NEW: App Specific Constants ---
 const APP_NAME = "Clarifin"; // <-- Your App Name (used in share message, etc.)
 const PLAY_STORE_PACKAGE = 'com.oscasavia.clarifin'; // <-- IMPORTANT: Replace with your actual package name
-const PRIVACY_POLICY_URL = 'https://lovely-unicorn-a7167c.netlify.app'; // <-- IMPORTANT: Replace with your Privacy Policy URL
+const PRIVACY_POLICY_URL = 'https://doc-hosting.flycricket.io/clarifin-privacy-policy/026deb9c-11a5-4c11-9c6a-6947022382f8/privacy'; // <-- IMPORTANT: Replace with your Privacy Policy URL
 const TERMS_SERVICE_URL = 'https://cerulean-biscotti-582837.netlify.app'; // <-- IMPORTANT: Replace with your Terms of Service URL (optional)
 // --- End App Specific Constants ---
 
