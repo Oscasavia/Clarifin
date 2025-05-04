@@ -5,7 +5,7 @@
     "owner": "oscasavia",
     "version": "2.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/Clarifin_icon.png",
+    "icon": "./assets/images/Clarifin_icon.jpg",
     "scheme": "clarifin",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -17,7 +17,7 @@
       "package": "com.oscasavia.clarifin",
       "versionCode": 3,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Clarifin_icon.png",
+        "foregroundImage": "./assets/images/Clarifin_icon.jpg",
         "backgroundColor": "#ffffff"
       },
       "permissions": [],
