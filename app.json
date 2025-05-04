@@ -17,8 +17,8 @@
       "package": "com.oscasavia.clarifin",
       "versionCode": 3,
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/Clarifin_icon.jpg",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/Clarifin_icon.png",
+        "backgroundColor": "grey"
       },
       "permissions": [],
       "playStoreUrl": "https://play.google.com/store/apps/details?id=com.oscasavia.clarifin"
