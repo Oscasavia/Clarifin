@@ -67,7 +67,7 @@ const AppNavigator = () => {
                         }
                     })}
                 >
-                    <Tab.Screen name="Dashboard" component={DashboardScreen} />
+                    <Tab.Screen name="Board" component={DashboardScreen} />
                     <Tab.Screen name="Calendar" component={FinanceTracker} />
                     <Tab.Screen name="Balance" component={SalaryInput} options={{ title: 'Balance'}}/>
                     <Tab.Screen name="Spend" component={SpendTracker} />
